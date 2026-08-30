@@ -627,12 +627,22 @@ async function runOne(item, idx) {
     got = await askModel(STATE.cfg, shuffled);
     ok = got === letters[shuffled.a];
   } catch (e) {
-    errText = e.name === "AbortError" ? "请求超时" : String(e.message || e);
+    errText = e.name === "AbortError" ? "请求超时（120 秒）" : String(e.message || e);
+    let hint = "";
     if (/failed to fetch/i.test(errText)) {
-      errText += "\n\n可能是浏览器 CORS 跨域限制：你所填的 API 站点未允许网页直接调用。\n解决办法：换一个支持 CORS 的接口地址，或按 README 用 Cloudflare Worker 反代一层。";
-      STATE.fatal = errText;
-      STATE.running = false;
+      hint = "\n\n可能是浏览器 CORS 跨域限制：你所填的 API 站点未允许网页直接调用。\n解决办法：换一个支持 CORS 的接口地址，或按 README 用 Cloudflare Worker 反代一层。";
+    } else if (/401/.test(errText)) {
+      hint = "\n\nHTTP 401：API 密钥无效或已失效。请检查密钥是否复制完整、是否已过期，以及该密钥所在分组是否包含你要测试的模型。";
+    } else if (/403/.test(errText)) {
+      hint = "\n\nHTTP 403：该密钥无权访问此模型（可能是分组或权限限制）。";
+    } else if (/404/.test(errText)) {
+      hint = "\n\nHTTP 404：模型名称可能不存在，请检查拼写（注意大小写）。";
+    } else if (/429/.test(errText)) {
+      hint = "\n\nHTTP 429：请求频率过高或额度不足，请稍后再试，或把并发数调低。";
     }
+    // 任何一题请求失败都直接中止整个测试：API 调不通，继续测没有意义
+    if (!STATE.fatal) STATE.fatal = "第 " + (STATE.done + 1) + " 题请求失败，测试已中止。\n\n" + errText + hint;
+    STATE.running = false;
   }
   if (ok) STATE.score += DIFF_WEIGHT[item.d];
   STATE.maxScore += DIFF_WEIGHT[item.d];
