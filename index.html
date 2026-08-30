@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模型智商检测 · Model IQ Test</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #14b8a6;
+    --accent-2: #0d9488;
+    --good: #22c55e;
+    --bad: #ef4444;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 28px; letter-spacing: 1px; }
+  header h1 .brain { display: inline-block; transform: rotate(-8deg); }
+  header p { color: var(--muted); margin-top: 8px; font-size: 14px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .card h2 { font-size: 16px; margin-bottom: 14px; color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], input[type=password], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .check input { accent-color: var(--accent); cursor: pointer; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--accent);
+    color: #04211e;
+    border: none; border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn:hover { background: #2dd4bf; }
+  .btn:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn.ghost:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
+  .btn.small { padding: 8px 16px; font-size: 13px; }
+
+  #progressCard { display: none; }
+  .bar-outer { background: var(--bg); border-radius: 999px; height: 10px; overflow: hidden; margin: 10px 0 6px; }
+  .bar-inner { background: linear-gradient(90deg, var(--accent), #38bdf8); height: 100%; width: 0; transition: width .3s; }
+  .progress-text { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+  #liveLog { margin-top: 14px; max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .log-item { font-size: 13px; padding: 8px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; }
+  .log-item.ok { border-left: 3px solid var(--good); }
+  .log-item.bad { border-left: 3px solid var(--bad); }
+  .log-item .q { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .log-item .a { white-space: nowrap; font-weight: 600; }
+  .log-item.ok .a { color: var(--good); }
+  .log-item.bad .a { color: var(--bad); }
+
+  #resultCard { display: none; text-align: center; }
+  .iq-number { font-size: 72px; font-weight: 800; color: var(--accent); line-height: 1; margin: 10px 0 4px; }
+  .iq-label { font-size: 16px; color: var(--text); margin-bottom: 4px; }
+  .iq-sub { font-size: 13px; color: var(--muted); }
+  .cat-bars { margin: 22px auto 6px; max-width: 520px; text-align: left; }
+  .cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; }
+  .cat-row .name { width: 76px; color: var(--muted); flex-shrink: 0; }
+  .cat-row .track { flex: 1; background: var(--bg); border-radius: 999px; height: 8px; overflow: hidden; }
+  .cat-row .fill { background: var(--accent); height: 100%; border-radius: 999px; }
+  .cat-row .val { width: 52px; text-align: right; flex-shrink: 0; color: var(--text); }
+  .diff-line { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .disclaimer { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.7; }
+
+  #boardCard table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  #boardCard th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  #boardCard td { padding: 9px 10px; border-bottom: 1px solid rgba(51,65,85,.5); }
+  #boardCard td.iq { font-weight: 700; color: var(--accent); }
+  #boardCard .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 14px 0; }
+
+  #errorBox { display: none; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); color: #fca5a5; border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.7; margin-bottom: 18px; white-space: pre-wrap; word-break: break-all; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 30px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="brain">🧠</span> 模型智商检测</h1>
+    <p>用一套分难度等级的智力题测试任意 OpenAI 兼容模型，自动判分并换算参考智商（IQ）· 题库每周自动轮换</p>
+  </header>
+
+  <div id="errorBox"></div>
+
+  <!-- 配置 -->
+  <div class="card" id="configCard">
+    <h2>① 连接配置 <span id="weekTag" style="color:var(--muted); font-size:12px; font-weight:400;"></span></h2>
+    <div class="grid">
+      <div class="full" style="background:var(--bg); border:1px dashed var(--border); border-radius:8px; padding:10px 12px; font-size:12px; color:var(--muted); line-height:1.7;">
+        本站已内置专用 API 通道，无需填写接口地址。只需填入你的 API 密钥和要测试的模型名称即可。
+      </div>
+      <div>
+        <label>API 密钥（仅保存在你的浏览器本地，不会上传到任何第三方）</label>
+        <input type="password" id="apiKey" placeholder="sk-..." spellcheck="false" autocomplete="off">
+      </div>
+      <div>
+        <label>模型名称</label>
+        <input type="text" id="model" placeholder="例如 gpt-4o / claude-sonnet-4 / deepseek-chat" spellcheck="false">
+      </div>
+      <div>
+        <label>题目数量</label>
+        <select id="qCount">
+          <option value="10">10 题（快速）</option>
+          <option value="20" selected>20 题（标准）</option>
+          <option value="30">30 题（严格）</option>
+          <option value="999">本周全部题库（完整）</option>
+        </select>
+      </div>
+      <div>
+        <label>并发请求数</label>
+        <select id="concurrency">
+          <option value="1">1（最稳妥）</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5（最快）</option>
+        </select>
+      </div>
+      <div class="full row" style="margin-top:2px;">
+        <label class="check"><input type="checkbox" id="rememberKey" checked> 记住密钥（仅存本机浏览器）</label>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center; margin-top:20px;">
+      <button class="btn small ghost" id="testBtn" onclick="testConnection()">测试连接</button>
+      <button class="btn" id="startBtn" onclick="startTest()">开始测试</button>
+    </div>
+  </div>
+
+  <!-- 进度 -->
+  <div class="card" id="progressCard">
+    <h2>② 测试进行中…</h2>
+    <div class="progress-text">
+      <span id="progText">0 / 0</span>
+      <span id="progStat"></span>
+    </div>
+    <div class="bar-outer"><div class="bar-inner" id="progBar"></div></div>
+    <div id="liveLog"></div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card" id="resultCard">
+    <h2>③ 测试结果</h2>
+    <div class="iq-sub" id="resModel"></div>
+    <div class="iq-number" id="resIq">--</div>
+    <div class="iq-label" id="resLabel"></div>
+    <div class="iq-sub" id="resDetail"></div>
+    <div class="diff-line" id="resDiff"></div>
+    <div class="cat-bars" id="resCats"></div>
+    <div class="row" style="justify-content:center; margin-top:16px;">
+      <button class="btn small ghost" onclick="copyResult()">复制结果</button>
+      <button class="btn small" onclick="resetTest()">再测一个模型</button>
+    </div>
+    <p class="disclaimer">
+      说明：本测试为娱乐与参考性质。题目为文字化智力测验题（数列 / 逻辑 / 语言类比 / 图形矩阵），分简单（1 分）、
+      中等（1.5 分）、困难（2 分）三级，按难度加权计分后换算参考智商（加权正确率 50% ≈ 100 分）。
+      题库按周轮换（本周种子抽取），同周内每次测试再随机抽题、打乱选项。分数不代表专业心理测量意义上的智商，
+      也不能等同于主流基准（MMLU、GPQA 等）排名。
+    </p>
+  </div>
+
+  <!-- 排行榜 -->
+  <div class="card" id="boardCard">
+    <h2>🏆 本机测试记录</h2>
+    <div id="boardBody"></div>
+    <div class="row" style="justify-content:flex-end;">
+      <button class="btn small ghost" onclick="clearBoard()">清空记录</button>
+    </div>
+  </div>
+
+  <footer id="footNote">纯前端工具 · 题目按周轮换、每次随机抽取、选项随机排序 · 密钥只在你的浏览器与所填 API 之间传输</footer>
+</div>
+
+<script src="questions.js"></script>
+<script>
+"use strict";
+
+/* ================= 题库：人工精选 106 题 + 生成题库（questions.js）合并 =================
+   cat: series=数列推理  logic=逻辑推理  verbal=语言类比  spatial=图形矩阵
+   d:   1=简单(1分)  2=中等(1.5分)  3=困难(2分)
+   a:   正确答案在 opts 中的下标（运行时会打乱） */
+const CAT_NAMES = { series: "数列推理", logic: "逻辑推理", verbal: "语言类比", spatial: "图形矩阵" };
+const DIFF_NAMES = { 1: "简单", 2: "中等", 3: "困难" };
+const DIFF_WEIGHT = { 1: 1, 2: 1.5, 3: 2 };
+const CURATED_BANK = [
+  // ---- 数列推理（30）----
+  { cat: "series", d: 1, q: "数列 2, 4, 8, 16, ( ? ) 中，问号处应填什么数字？", opts: ["24", "32", "30", "64"], a: 1 },
+  { cat: "series", d: 1, q: "数列 1, 1, 2, 3, 5, 8, ( ? ) 中，问号处应填什么数字？", opts: ["11", "12", "13", "15"], a: 2 },
+  { cat: "series", d: 1, q: "数列 2, 3, 5, 7, 11, ( ? ) 中，问号处应填什么数字？", opts: ["12", "13", "14", "15"], a: 1 },
+  { cat: "series", d: 1, q: "数列 1, 4, 9, 16, 25, ( ? ) 中，问号处应填什么数字？", opts: ["30", "32", "36", "49"], a: 2 },
+  { cat: "series", d: 1, q: "数列 96, 48, 24, 12, ( ? ) 中，问号处应填什么数字？", opts: ["2", "4", "6", "8"], a: 2 },
+  { cat: "series", d: 1, q: "数列 1, 2, 4, 7, 11, ( ? ) 中，问号处应填什么数字？", opts: ["15", "16", "17", "18"], a: 1 },
+  { cat: "series", d: 1, q: "数列 9, 16, 25, 36, ( ? ) 中，问号处应填什么数字？", opts: ["45", "47", "48", "49"], a: 3 },
+  { cat: "series", d: 2, q: "数列 2, 6, 12, 20, 30, ( ? ) 中，问号处应填什么数字？", opts: ["40", "42", "44", "46"], a: 1 },
+  { cat: "series", d: 2, q: "数列 1, 8, 27, 64, ( ? ) 中，问号处应填什么数字？", opts: ["100", "121", "125", "216"], a: 2 },
+  { cat: "series", d: 2, q: "数列 3, 6, 11, 18, 27, ( ? ) 中，问号处应填什么数字？", opts: ["36", "38", "40", "42"], a: 1 },
+  { cat: "series", d: 2, q: "数列 1, 3, 7, 15, 31, ( ? ) 中，问号处应填什么数字？", opts: ["47", "55", "63", "64"], a: 2 },
+  { cat: "series", d: 2, q: "数列 1, 2, 6, 24, 120, ( ? ) 中，问号处应填什么数字？", opts: ["240", "480", "600", "720"], a: 3 },
+  { cat: "series", d: 2, q: "数列 3, 8, 15, 24, 35, ( ? ) 中，问号处应填什么数字？", opts: ["45", "46", "47", "48"], a: 3 },
+  { cat: "series", d: 2, q: "数列 1, 4, 13, 40, ( ? ) 中，问号处应填什么数字？", opts: ["80", "103", "121", "160"], a: 2 },
+  { cat: "series", d: 2, q: "数列 2, 3, 5, 9, 17, 33, ( ? ) 中，问号处应填什么数字？", opts: ["41", "57", "63", "65"], a: 3 },
+  { cat: "series", d: 2, q: "数列 5, 11, 23, 47, ( ? ) 中，问号处应填什么数字？", opts: ["71", "83", "94", "95"], a: 3 },
+  { cat: "series", d: 2, q: "数列 100, 90, 81, 73, ( ? ) 中，问号处应填什么数字？", opts: ["64", "65", "66", "67"], a: 2 },
+  { cat: "series", d: 2, q: "数列 2, 4, 12, 48, 240, ( ? ) 中，问号处应填什么数字？", opts: ["480", "960", "1200", "1440"], a: 3 },
+  { cat: "series", d: 2, q: "数列 7, 10, 8, 11, 9, 12, ( ? ) 中，问号处应填什么数字？", opts: ["10", "13", "14", "15"], a: 0 },
+  { cat: "series", d: 2, q: "数列 1, 2, 5, 14, 41, ( ? ) 中，问号处应填什么数字？", opts: ["81", "96", "122", "123"], a: 2 },
+  { cat: "series", d: 2, q: "数列 13, 17, 23, 31, 41, ( ? ) 中，问号处应填什么数字？", opts: ["47", "51", "53", "55"], a: 2 },
+  { cat: "series", d: 2, q: "数列 4, 12, 6, 18, 9, ( ? ) 中，问号处应填什么数字？", opts: ["18", "27", "36", "13"], a: 1 },
+  { cat: "series", d: 2, q: "数列 5, 7, 11, 19, 35, ( ? ) 中，问号处应填什么数字？", opts: ["51", "59", "67", "69"], a: 2 },
+  { cat: "series", d: 2, q: "数列 12, 15, 20, 27, 36, ( ? ) 中，问号处应填什么数字？", opts: ["45", "46", "47", "48"], a: 2 },
+  { cat: "series", d: 2, q: "数列 3, 4, 7, 11, 18, 29, ( ? ) 中，问号处应填什么数字？", opts: ["41", "44", "47", "48"], a: 2 },
+  { cat: "series", d: 3, q: "数列 2, 10, 30, 68, 130, ( ? ) 中，问号处应填什么数字？", opts: ["162", "196", "222", "260"], a: 2 },
+  { cat: "series", d: 3, q: "数列 0, 1, 3, 8, 21, ( ? ) 中，问号处应填什么数字？", opts: ["34", "43", "55", "63"], a: 2 },
+  { cat: "series", d: 3, q: "数列 1, 5, 14, 30, 55, ( ? ) 中，问号处应填什么数字？", opts: ["79", "84", "91", "96"], a: 2 },
+  { cat: "series", d: 3, q: "数列 4, 9, 25, 49, 121, ( ? ) 中，问号处应填什么数字？", opts: ["144", "169", "196", "225"], a: 1 },
+  { cat: "series", d: 3, q: "数列 1, 11, 21, 1211, 111221, ( ? ) 中，问号处应填什么数字？（提示：后一项描述前一项的读法）", opts: ["211122", "312211", "122113", "412211"], a: 1 },
+
+  // ---- 逻辑推理（29）----
+  { cat: "logic", d: 1, q: "小明比小红高，小红比小刚高。三人中谁最矮？", opts: ["小明", "小红", "小刚", "无法确定"], a: 2 },
+  { cat: "logic", d: 1, q: "所有的玫瑰都是花，所有的花都需要浇水。由此可以推出：", opts: ["所有的玫瑰都需要浇水", "有些玫瑰不需要浇水", "所有需要浇水的都是玫瑰", "有些花是玫瑰"], a: 0 },
+  { cat: "logic", d: 1, q: "如果下雨，地面就会湿。现在地面没有湿。可以推出：", opts: ["下过雨", "没有下雨", "地面刚被晒干", "无法得出任何结论"], a: 1 },
+  { cat: "logic", d: 1, q: '"并非所有的鸟都会飞"这句话的含义等价于：', opts: ["所有的鸟都不会飞", "有些鸟不会飞", "有些鸟会飞", "没有鸟会飞"], a: 1 },
+  { cat: "logic", d: 1, q: "某队伍中，小明从左往右数排第 5，从右往左数排第 8。这个队伍一共有多少人？", opts: ["11 人", "12 人", "13 人", "14 人"], a: 1 },
+  { cat: "logic", d: 1, q: "今天是星期四，100 天以后那一天是星期几？", opts: ["星期五", "星期六", "星期日", "星期一"], a: 1 },
+  { cat: "logic", d: 1, q: "5 个人开会，每两人之间都握一次手，一共要握多少次手？", opts: ["8 次", "10 次", "12 次", "20 次"], a: 1 },
+  { cat: "logic", d: 1, q: "一张纸对折 3 次后，一共有几层？", opts: ["6 层", "8 层", "9 层", "12 层"], a: 1 },
+  { cat: "logic", d: 1, q: "3 只猫 3 分钟能抓 3 只老鼠。照这样的速度，9 只猫抓 9 只老鼠需要几分钟？", opts: ["3 分钟", "6 分钟", "9 分钟", "27 分钟"], a: 0 },
+  { cat: "logic", d: 1, q: "1+2+3+……+100 的和是奇数还是偶数？", opts: ["奇数", "偶数", "无法确定", "既不是奇数也不是偶数"], a: 1 },
+  { cat: "logic", d: 2, q: "抽屉里有红、蓝、黄三种颜色的袜子（数量足够多且混放），关灯后至少取出几只才能保证配成一双同色的？", opts: ["3 只", "4 只", "5 只", "6 只"], a: 1 },
+  { cat: "logic", d: 2, q: "8 个外形相同的球，其中 1 个比其他重。用一架没有砝码的天平，最少称几次一定能找出这个重球？", opts: ["1 次", "2 次", "3 次", "4 次"], a: 1 },
+  { cat: "logic", d: 2, q: "一根粗细不均匀的绳子，从一端点燃烧完正好需要 1 小时。要准确测量 30 分钟，应该：", opts: ["从一端点燃烧到一半长度", "把绳子对折后从一端点燃", "两端同时点燃", "先烧一半再烧另一半"], a: 2 },
+  { cat: "logic", d: 2, q: "一个数除以 3 余 2，除以 5 余 3，除以 7 余 2。这个数最小是多少？", opts: ["15", "21", "23", "33"], a: 2 },
+  { cat: "logic", d: 2, q: "时钟显示 3 点 15 分时，时针与分针的夹角（较小角）是多少度？", opts: ["0 度", "7.5 度", "15 度", "30 度"], a: 1 },
+  { cat: "logic", d: 2, q: "四个好朋友比赛，没有并列名次。已知：小红不是第一也不是最后；小刚的名次在小明之后；小华不是第一。谁是第一名？", opts: ["小明", "小红", "小刚", "小华"], a: 0 },
+  { cat: "logic", d: 2, q: '三个盒子分别装着苹果、橙子、两者混合，但三个盒子的标签全部贴错了。只允许从一个盒子里拿出一个水果查看，从哪个盒子拿能确定全部内容？', opts: ['贴"苹果"标签的盒子', '贴"橙子"标签的盒子', '贴"混合"标签的盒子', "任选一个盒子都可以"], a: 2 },
+  { cat: "logic", d: 2, q: "把一根木头锯成 4 段需要 6 分钟（每锯一次用时相同）。照这样的速度，锯成 6 段需要几分钟？", opts: ["8 分钟", "9 分钟", "10 分钟", "12 分钟"], a: 2 },
+  { cat: "logic", d: 2, q: "一只蜗牛掉进 10 米深的井里，白天向上爬 3 米，晚上向下滑 2 米。它第几天能爬出井口？", opts: ["第 8 天", "第 9 天", "第 10 天", "第 11 天"], a: 0 },
+  { cat: "logic", d: 2, q: "100 名学生中，至少有多少人在同一个月过生日（保证成立）？", opts: ["8 人", "9 人", "10 人", "12 人"], a: 1 },
+  { cat: "logic", d: 2, q: "一列长 200 米的火车以 72 千米/小时的速度驶过长 800 米的隧道，从车头进隧道到车尾离开隧道需要多少秒？", opts: ["40 秒", "45 秒", "50 秒", "60 秒"], a: 2 },
+  { cat: "logic", d: 2, q: "同时抛 3 枚硬币，至少有一枚正面朝上的概率是多少？", opts: ["1/2", "2/3", "3/4", "7/8"], a: 3 },
+  { cat: "logic", d: 2, q: "今年爸爸 35 岁，儿子 7 岁。几年后爸爸的年龄正好是儿子的 3 倍？", opts: ["5 年后", "6 年后", "7 年后", "8 年后"], a: 2 },
+  { cat: "logic", d: 3, q: '甲说："乙在说谎。" 乙说："丙在说谎。" 丙说："甲和乙都在说谎。" 三人中谁说的是真话？', opts: ["甲", "乙", "丙", "都说谎"], a: 1 },
+  { cat: "logic", d: 3, q: "12 个外观相同的球，其中 1 个重量异常（不知道是偏重还是偏轻）。用一架没有砝码的天平，最少称几次一定能找出这个球？", opts: ["2 次", "3 次", "4 次", "5 次"], a: 1 },
+  { cat: "logic", d: 3, q: "两人轮流报数，每次只能报 1 个、2 个或 3 个数，从 1 开始连续往下报，谁报到 30 谁获胜。先报的人第一次报几个数才能必胜？", opts: ["先报 1 个", "先报 2 个", "先报 3 个", "无论先报几个都无法必胜"], a: 1 },
+  { cat: "logic", d: 3, q: '岛上的骑士只说真话，骗子只说假话。A 说："我们两人中至少有一个是骗子。" A 和 B 的身份是？', opts: ["A 是骑士，B 是骗子", "A 是骗子，B 是骑士", "两人都是骑士", "两人都是骗子"], a: 0 },
+  { cat: "logic", d: 3, q: "一昼夜（24 小时）之内，时钟的时针和分针一共重合多少次？", opts: ["20 次", "22 次", "23 次", "24 次"], a: 1 },
+  { cat: "logic", d: 3, q: '甲、乙、丙三人中只有一人会游泳。甲说："我会。"乙说："我不会。"丙说："甲不会。"已知三人中只有一人说真话，谁会游泳？', opts: ["甲", "乙", "丙", "都不会"], a: 1 },
+
+  // ---- 语言类比（25）----
+  { cat: "verbal", d: 1, q: "医生 对于 （医院） 相当于 教师 对于 （ ）", opts: ["学校", "工厂", "书店", "法庭"], a: 0 },
+  { cat: "verbal", d: 1, q: "鸟 对于 （翅膀） 相当于 鱼 对于 （ ）", opts: ["鳞片", "鳍", "水", "渔网"], a: 1 },
+  { cat: "verbal", d: 1, q: "（手套） 对于 （手） 相当于 （鞋） 对于 （ ）", opts: ["腿", "脚", "身体", "膝盖"], a: 1 },
+  { cat: "verbal", d: 1, q: "太阳 对于 （白天） 相当于 月亮 对于 （ ）", opts: ["圆缺", "星星", "夜晚", "天空"], a: 2 },
+  { cat: "verbal", d: 1, q: '"稀疏"的反义词是：', opts: ["分散", "密集", "稀少", "空旷"], a: 1 },
+  { cat: "verbal", d: 1, q: '"一年之计在于春"的下一句是：', opts: ["一日之计在于晨", "一寸光阴一寸金", "少壮不努力，老大徒伤悲", "万物生长靠太阳"], a: 0 },
+  { cat: "verbal", d: 1, q: "站台 对于 （火车） 相当于 港口 对于 （ ）", opts: ["货物", "码头", "轮船", "大海"], a: 2 },
+  { cat: "verbal", d: 1, q: "瓦特 对于 （蒸汽机） 相当于 （ ） 对于 （万有引力定律）", opts: ["爱因斯坦", "牛顿", "伽利略", "达尔文"], a: 1 },
+  { cat: "verbal", d: 1, q: '"漠视"的反义词是：', opts: ["忽略", "轻视", "重视", "冷淡"], a: 2 },
+  { cat: "verbal", d: 1, q: "纸张 对于 （书籍） 相当于 布料 对于 （ ）", opts: ["裁缝", "衣服", "纺织厂", "画布"], a: 1 },
+  { cat: "verbal", d: 1, q: '成语填空：守（　）待兔', opts: ["株", "珠", "株连的株", "猪"], a: 0 },
+  { cat: "verbal", d: 2, q: '成语"画蛇添足"的意思是：', opts: ["锦上添花", "多此一举", "弄假成真", "画技高超"], a: 1 },
+  { cat: "verbal", d: 2, q: '成语"亡羊补牢"比喻：', opts: ["损失无法挽回", "事前预防最重要", "出了问题及时补救还不算晚", "加固防范再也没有用"], a: 2 },
+  { cat: "verbal", d: 2, q: '成语"三顾茅庐"中的"茅庐"指的是谁的住处？', opts: ["刘备", "关羽", "张飞", "诸葛亮"], a: 3 },
+  { cat: "verbal", d: 2, q: '"雪中送炭"的反义成语是：', opts: ["锦上添花", "雪上加霜", "落井下石", "趁火打劫"], a: 1 },
+  { cat: "verbal", d: 2, q: '成语"东施效颦"比喻：', opts: ["善于学习他人长处", "盲目模仿别人，结果适得其反", "互相攀比", "以丑为美"], a: 1 },
+  { cat: "verbal", d: 2, q: '成语"破釜沉舟"讲的是哪位历史人物的故事？', opts: ["刘邦", "项羽", "韩信", "曹操"], a: 1 },
+  { cat: "verbal", d: 2, q: '成语"指鹿为马"与哪位历史人物有关？', opts: ["秦桧", "赵高", "李斯", "和珅"], a: 1 },
+  { cat: "verbal", d: 2, q: '成语"胸有成竹"的意思是：', opts: ["心中长满了竹子", "做事之前已有完整的谋划打算", "胸怀大志", "心胸狭窄"], a: 1 },
+  { cat: "verbal", d: 2, q: '下列哪部著作不属于"四书"？', opts: ["《大学》", "《中庸》", "《论语》", "《史记》"], a: 3 },
+  { cat: "verbal", d: 2, q: '"疾风知劲草"这句话比喻：', opts: ["风越大草长得越快", "只有在严峻的考验中才能显出坚强的意志", "杂草的生命力顽强", "环境决定成败"], a: 1 },
+  { cat: "verbal", d: 3, q: '成语"讳疾忌医"讲的是神医扁鹊与哪位国君的故事？', opts: ["齐桓公", "蔡桓公", "晋文公", "楚庄王"], a: 1 },
+  { cat: "verbal", d: 3, q: '"因材施教"的教育理念最早由我国古代哪位思想家实践？', opts: ["孟子", "孔子", "老子", "墨子"], a: 1 },
+  { cat: "verbal", d: 3, q: '成语"不刊之论"中"刊"的意思是：', opts: ["刊登", "出版", "修改、删改", "刻印"], a: 2 },
+  { cat: "verbal", d: 3, q: '"七月流火"的本义是指：', opts: ["七月天气炎热如流火", "天气逐渐转凉", "火山喷发", "晚霞满天"], a: 1 },
+
+  // ---- 图形矩阵（22，文字化）----
+  { cat: "spatial", d: 1, q: "按图形循环规律：○ △ ○ △ ○ △ ○ ( ? )，问号处应该是什么图形？", opts: ["△", "○", "□", "☆"], a: 0 },
+  { cat: "spatial", d: 1, q: "一个箭头图案按顺时针方向依次旋转 90 度，前四次分别指向上、右、下，第五次指向哪里？", opts: ["上", "左", "下", "右"], a: 1 },
+  { cat: "spatial", d: 1, q: "一排图形中黑点的数量依次为 1、2、3、4，按规律第五个图形有几个黑点？", opts: ["4 个", "5 个", "6 个", "8 个"], a: 1 },
+  { cat: "spatial", d: 1, q: "按图形循环规律：●●○ ●●○ ●● ( ? )，问号处应该是什么？", opts: ["●", "○", "两个●", "两个○"], a: 1 },
+  { cat: "spatial", d: 1, q: "一个正方体有几个顶点？", opts: ["6 个", "8 个", "12 个", "4 个"], a: 1 },
+  { cat: "spatial", d: 1, q: "按图形循环规律：△△○○□□△△ ( ? )，问号处应该是什么图形？", opts: ["□", "△", "○", "○○"], a: 2 },
+  { cat: "spatial", d: 1, q: "一个正方体有几条棱？", opts: ["6 条", "8 条", "12 条", "16 条"], a: 2 },
+  { cat: "spatial", d: 1, q: "箭头按顺时针每次旋转 45 度，依次指向上、右上、右、右下，下一次指向哪里？", opts: ["右", "下", "左下", "左"], a: 1 },
+  { cat: "spatial", d: 1, q: "第 n 个图形的黑点排成 n×n 的正方形点阵。第 4 个图形有几个黑点？", opts: ["8 个", "12 个", "16 个", "20 个"], a: 2 },
+  { cat: "spatial", d: 1, q: "下列大写英文字母中，哪一个有无数条对称轴？", opts: ["A", "H", "O", "L"], a: 2 },
+  { cat: "spatial", d: 1, q: "一个正四面体（金字塔形的四面都一样）有几个面？", opts: ["3 个", "4 个", "6 个", "8 个"], a: 1 },
+  { cat: "spatial", d: 1, q: '把数字"6"写在纸条上，旋转 180 度后看起来像哪个数字？', opts: ["8", "9", "0", "3"], a: 1 },
+  { cat: "spatial", d: 2, q: "一个 3×3 图形方阵中，每行黑点数依次为：第一行 1、2、3；第二行 2、3、4；第三行 3、4、( ? )。问号处有几个黑点？", opts: ["4 个", "5 个", "6 个", "7 个"], a: 1 },
+  { cat: "spatial", d: 2, q: "每行三个格子里圆、方、三角各出现一次。第一行是圆、方、三角，第二行是方、三角、圆，第三行已有圆、方，问号处应该是什么？", opts: ["圆", "方", "三角", "都可以"], a: 2 },
+  { cat: "spatial", d: 2, q: "一个标准骰子相对两面的点数之和为 7。如果 1、2、3 三个面两两相邻，那么与 1 相对的面是几点？", opts: ["5 点", "6 点", "4 点", "无法确定"], a: 1 },
+  { cat: "spatial", d: 2, q: '一串珠子按"1 黑 2 白"的顺序循环排列：黑白白黑白白……第 20 颗珠子是什么颜色？', opts: ["黑色", "白色", "无法确定", "黑白各一半"], a: 1 },
+  { cat: "spatial", d: 2, q: "一个 3×3 方格中按棋盘规律涂色：第一行是黑、白、黑，第二行是白、黑、白，第三行是黑、白、( ? )。问号处应该是什么颜色？", opts: ["白色", "黑色", "灰色", "任意颜色"], a: 1 },
+  { cat: "spatial", d: 2, q: "两个完全相同的直角三角形，一定能拼成下列哪种图形？", opts: ["正方形", "长方形", "圆形", "等边三角形"], a: 1 },
+  { cat: "spatial", d: 2, q: "一根绳子对折 2 次后，从中间剪一刀（垂直于绳子方向），绳子变成了几段？", opts: ["4 段", "5 段", "6 段", "8 段"], a: 1 },
+  { cat: "spatial", d: 2, q: "3×3 图形方阵中每行三个图形的边数递增：第一行是三角形、四边形、五边形；第二行是四边形、五边形、三角形；第三行已有五边形、三角形，问号处应该是什么图形？", opts: ["三角形", "四边形", "五边形", "圆形"], a: 1 },
+  { cat: "spatial", d: 3, q: "把 1～9 填入三阶幻方（九宫格），使每行、每列、每条对角线之和都等于 15。正中间的格子应填几？", opts: ["1", "4", "5", "9"], a: 2 },
+  { cat: "spatial", d: 3, q: "一个正方体剪开摊平（保持连成一片），不同的展开图形状一共有多少种？", opts: ["6 种", "8 种", "11 种", "24 种"], a: 2 },
+];
+
+/* 合并生成题库：按题干去重（防止与人工题重复），并做基本完整性校验 */const BANK = (() => {
+  const seenQ = new Set(CURATED_BANK.map((q) => q.q));
+  const extra = (typeof GEN_BANK !== "undefined" && Array.isArray(GEN_BANK) ? GEN_BANK : []).filter(
+    (q) => q && typeof q.q === "string" && !seenQ.has(q.q) &&
+      [1, 2, 3].includes(q.d) && Array.isArray(q.opts) && q.opts.length === 4 &&
+      Number.isInteger(q.a) && q.a >= 0 && q.a <= 3 && CAT_NAMES[q.cat]
+  );
+  return CURATED_BANK.concat(extra);
+})();
+
+/* ================= 工具 ================= */
+const $ = (id) => document.getElementById(id);
+/* 站点专用 API 通道（不对页面用户展示）。换通道时只改这一处。 */
+const DEFAULT_BASE = "https://worker-withered-mountain-2d73.shenxun1234.workers.dev";
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(arr, rnd) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function weekInfo() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const week = Math.floor((now - start) / (7 * 86400000)) + 1;
+  return { year: now.getFullYear(), week };
+}
+/* 本周题库：用 年份+周数 做种子确定性抽取，每到新的一周自动换一批 */
+function weekPool() {
+  const { year, week } = weekInfo();
+  const rnd = mulberry32(year * 1000 + week);
+  const pool = [];
+  for (const cat of Object.keys(CAT_NAMES)) {
+    const items = seededShuffle(BANK.filter((q) => q.cat === cat).slice(), rnd);
+    pool.push(...items.slice(0, 50));
+  }
+  return pool;
+}
+function showError(msg) {
+  const box = $("errorBox");
+  box.textContent = msg;
+  box.style.display = "block";
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function hideError() { $("errorBox").style.display = "none"; }
+
+function normalizeBase(raw) {
+  let base = raw.trim().replace(/\s+/g, "");
+  if (!base) return "";
+  if (!/^https?:\/\//i.test(base)) base = "https://" + base;
+  base = base.replace(/\/+$/, "");
+  base = base.replace(/\/chat\/completions$/i, "");
+  if (!/\/v\d+$/i.test(base)) base += "/v1";
+  return base;
+}
+
+/* 恢复本地配置 */
+let CANDIDATES = [];
+(function init() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("miq_config") || "{}");
+    if (saved.model) $("model").value = saved.model;
+    if (saved.key) { $("apiKey").value = saved.key; $("rememberKey").checked = true; }
+  } catch (e) { /* ignore */ }
+  const { year, week } = weekInfo();
+  CANDIDATES = weekPool();
+  $("weekTag").textContent = `· 本期题库：${year} 年第 ${week} 周（${CANDIDATES.length} 题）`;
+  $("footNote").textContent = `纯前端工具 · 每周一自动轮换题库（当前 ${year} 年第 ${week} 周）· 每次随机抽题、选项随机排序 · 密钥只在你的浏览器与所填 API 之间传输`;
+  renderBoard();
+})();
+
+/* ================= 抽题（按难度配额：简单 40% / 中等 40% / 困难 20%） ================= */
+function pickQuestions(n) {
+  const ratios = { 1: 0.4, 2: 0.4, 3: 0.2 };
+  const used = new Set();
+  const picked = [];
+  for (const d of [1, 2, 3]) {
+    const avail = shuffle(CANDIDATES.map((q, i) => i).filter((i) => CANDIDATES[i].d === d && !used.has(i)));
+    const need = Math.min(Math.round(n * ratios[d]), avail.length);
+    for (let k = 0; k < need; k++) {
+      picked.push(CANDIDATES[avail[k]]);
+      used.add(avail[k]);
+    }
+  }
+  // 某难度不够配额时，从剩余题目中补齐
+  if (picked.length < n) {
+    const rest = shuffle(CANDIDATES.map((q, i) => i).filter((i) => !used.has(i)));
+    for (const i of rest) {
+      if (picked.length >= n) break;
+      picked.push(CANDIDATES[i]);
+      used.add(i);
+    }
+  }
+  return shuffle(picked);
+}
+
+/* ================= 提问与判分 ================= */
+function buildPrompt(item) {
+  const letters = ["A", "B", "C", "D"];
+  const opts = item.opts.map((t, i) => `${letters[i]}. ${t}`).join("\n");
+  return {
+    system: "你正在参加一项标准化智商测验。请从给出的选项中选择唯一正确答案，只回答选项字母（A、B、C 或 D），不要输出任何其他内容。",
+    user: `题目：${item.q}\n${opts}\n\n请只输出一个字母。`,
+  };
+}
+
+function parseAnswer(text) {
+  if (!text) return null;
+  const cleaned = String(text);
+  // 最强信号："答案是X / answer is X"（思维链里可能多次出现，取最后一次）
+  const strong = [...cleaned.matchAll(/(?:答案|answer)[^A-Da-d]{0,8}([A-Da-d])(?![A-Za-z])/g)];
+  if (strong.length) return strong[strong.length - 1][1].toUpperCase();
+  // 次强信号："选项X / option X"（同样取最后一次，如"选项A不对，选项C正确"）
+  const opt = [...cleaned.matchAll(/(?:选项|option)[^A-Da-d]{0,8}([A-Da-d])(?![A-Za-z])/g)];
+  if (opt.length) return opt[opt.length - 1][1].toUpperCase();
+  // 兜底：取最后一个独立的 A-D 字母
+  const standalone = cleaned.match(/(?:^|[^A-Za-z])([A-D])(?![A-Za-z])/g);
+  if (standalone && standalone.length) return standalone[standalone.length - 1].match(/([A-D])/)[1];
+  const any = cleaned.match(/[A-D]/);
+  return any ? any[0] : null;
+}
+
+async function askModel(cfg, item) {
+  const p = buildPrompt(item);
+  const body = {
+    model: cfg.model,
+    messages: [
+      { role: "system", content: p.system },
+      { role: "user", content: p.user },
+    ],
+    temperature: 0,
+    stream: false,
+  };
+  const doFetch = async (payload) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 120000);
+    try {
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + cfg.key },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        const err = new Error(`HTTP ${res.status} ${t.slice(0, 300)}`);
+        err.status = res.status;
+        err.body = t;
+        throw err;
+      }
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  let data;
+  try {
+    data = await doFetch(body);
+  } catch (e) {
+    if (e.status === 400 && /temperature/i.test(e.body || "")) {
+      const { temperature, ...rest } = body;
+      data = await doFetch(rest);
+    } else {
+      throw e;
+    }
+  }
+  const msg = data && data.choices && data.choices[0] && data.choices[0].message;
+  const content = (msg && msg.content) || "";
+  return parseAnswer(content);
+}
+
+async function testConnection() {
+  hideError();
+  const base = normalizeBase(DEFAULT_BASE);
+  const key = $("apiKey").value.trim();
+  const model = $("model").value.trim();
+  if (!key) return showError("请先填写 API 密钥。");
+  if (!model) return showError("请先填写模型名称。");
+  const btn = $("testBtn");
+  btn.disabled = true;
+  btn.textContent = "测试中…";
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    const res = await fetch(base + "/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: "请只回复两个字：正常" }], stream: false }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      showError(`接口返回 HTTP ${res.status}：\n${t.slice(0, 500)}`);
+    } else {
+      const data = await res.json();
+      const reply = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "";
+      alert("✓ 连接成功，可以开始测试！\n模型回复：" + String(reply).trim().slice(0, 50));
+    }
+  } catch (e) {
+    if (e.name === "AbortError") {
+      showError("连接超时（45 秒）。请检查接口地址是否可达。");
+    } else {
+      showError(
+        "无法连接到接口：" + e.message +
+        "\n\n若提示 Failed to fetch，通常是浏览器 CORS 跨域限制——该站点不允许网页直接调用。" +
+        "\n解决方法（见 README）：部署本项目附带的 Cloudflare Worker 反代（worker.js），" +
+        "然后把页面里的 API 地址改成你的 Worker 地址即可。"
+      );
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "测试连接";
+  }
+}
+
+/* ================= 测试流程 ================= */
+let STATE = { running: false };
+let queueIdx = 0;
+
+async function startTest() {
+  if (STATE.running) return;
+  hideError();
+  const base = normalizeBase(DEFAULT_BASE);
+  const key = $("apiKey").value.trim();
+  const model = $("model").value.trim();
+  const n = parseInt($("qCount").value, 10);
+  const conc = parseInt($("concurrency").value, 10);
+
+  if (!key) return showError("请填写 API 密钥。");
+  if (!model) return showError("请填写模型名称。");
+
+  const cfgToSave = { model };
+  if ($("rememberKey").checked) cfgToSave.key = key; // 不勾选时不写入，覆盖保存即清除旧密钥
+  try { localStorage.setItem("miq_config", JSON.stringify(cfgToSave)); } catch (e) { /* ignore */ }
+
+  const cfg = { url: base + "/chat/completions", key, model };
+  const questions = pickQuestions(Math.min(n, CANDIDATES.length));
+  STATE = { running: true, results: [], total: questions.length, done: 0, score: 0, maxScore: 0, cfg, startTime: Date.now(), questions, fatal: null };
+  queueIdx = 0;
+
+  $("configCard").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("progressCard").style.display = "block";
+  $("liveLog").innerHTML = "";
+  $("startBtn").disabled = true;
+  updateProgress();
+
+  const workers = Array.from({ length: Math.min(conc, questions.length) }, () => worker());
+  await Promise.all(workers);
+
+  STATE.running = false;
+  $("startBtn").disabled = false;
+  finishTest();
+}
+
+async function worker() {
+  while (STATE.running) {
+    const i = queueIdx++;
+    if (i >= STATE.questions.length) return;
+    await runOne(STATE.questions[i], i);
+  }
+}
+
+async function runOne(item, idx) {
+  const letters = ["A", "B", "C", "D"];
+  const order = shuffle([0, 1, 2, 3]);
+  const shuffled = {
+    cat: item.cat,
+    d: item.d,
+    q: item.q,
+    opts: order.map((o) => item.opts[o]),
+    a: order.indexOf(item.a),
+  };
+  let got = null, ok = false, errText = "";
+  try {
+    got = await askModel(STATE.cfg, shuffled);
+    ok = got === letters[shuffled.a];
+  } catch (e) {
+    errText = e.name === "AbortError" ? "请求超时" : String(e.message || e);
+    if (/failed to fetch/i.test(errText)) {
+      errText += "\n\n可能是浏览器 CORS 跨域限制：你所填的 API 站点未允许网页直接调用。\n解决办法：换一个支持 CORS 的接口地址，或按 README 用 Cloudflare Worker 反代一层。";
+      STATE.fatal = errText;
+      STATE.running = false;
+    }
+  }
+  if (ok) STATE.score += DIFF_WEIGHT[item.d];
+  STATE.maxScore += DIFF_WEIGHT[item.d];
+  STATE.done++;
+  STATE.results.push({ cat: item.cat, d: item.d, ok, got, ans: letters[shuffled.a], err: errText, q: item.q });
+  addLog(item, ok, got, letters[shuffled.a], errText);
+  updateProgress();
+}
+
+function addLog(item, ok, got, ans, err) {
+  const log = $("liveLog");
+  const div = document.createElement("div");
+  div.className = "log-item " + (ok ? "ok" : "bad");
+  const short = item.q.length > 34 ? item.q.slice(0, 34) + "…" : item.q;
+  const res = err
+    ? `出错：${err.slice(0, 40)}`
+    : ok
+      ? `✓ ${got || ""}`
+      : `✗ 答 ${got || "无回答"}（正确 ${ans}）`;
+  div.innerHTML = `<span class="q">【${CAT_NAMES[item.cat]}·${DIFF_NAMES[item.d]}】${short.replace(/</g, "&lt;")}</span><span class="a">${res.replace(/</g, "&lt;")}</span>`;
+  log.prepend(div);
+}
+
+function updateProgress() {
+  const pct = STATE.total ? (STATE.done / STATE.total) * 100 : 0;
+  $("progBar").style.width = pct + "%";
+  $("progText").textContent = `${STATE.done} / ${STATE.total}`;
+  $("progStat").textContent = `得分 ${STATE.score.toFixed(1).replace(/\.0$/, "")} / ${STATE.maxScore.toFixed(1).replace(/\.0$/, "")}`;
+}
+
+function finishTest() {
+  const { results, score, maxScore, cfg, startTime } = STATE;
+  if (STATE.fatal) {
+    $("progressCard").style.display = "none";
+    $("configCard").style.display = "block";
+    showError("测试已中止，未产生有效结果。\n\n" + STATE.fatal);
+    return;
+  }
+  if (!STATE.total) { $("configCard").style.display = "block"; return; }
+  const hasErr = results.some((r) => r.err);
+  const pct = maxScore ? score / maxScore : 0;
+  const iq = Math.round(55 + pct * 90);
+  const secs = Math.round((Date.now() - startTime) / 1000);
+  const { year, week } = weekInfo();
+  let label, labelColor;
+  if (iq >= 130) { label = "天才级 🏆"; labelColor = "var(--good)"; }
+  else if (iq >= 115) { label = "聪明 💡"; labelColor = "var(--good)"; }
+  else if (iq >= 85) { label = "正常 🙂"; labelColor = "var(--accent)"; }
+  else if (iq >= 70) { label = "偏弱 😐"; labelColor = "var(--warn)"; }
+  else { label = "迟钝 🫠"; labelColor = "var(--bad)"; }
+
+  const correctCount = results.filter((r) => r.ok).length;
+  $("resultCard").style.display = "block";
+  $("resModel").textContent = `模型：${cfg.model}`;
+  $("resIq").textContent = iq;
+  $("resIq").style.color = labelColor;
+  $("resLabel").textContent = label;
+  $("resLabel").style.color = labelColor;
+  $("resDetail").textContent =
+    `得分 ${score.toFixed(1).replace(/\.0$/, "")} / ${maxScore.toFixed(1).replace(/\.0$/, "")}（加权正确率 ${(pct * 100).toFixed(0)}%，答对 ${correctCount}/${results.length} 题）· 用时 ${secs} 秒` +
+    (hasErr ? ` · ⚠ 有 ${results.filter((r) => r.err).length} 题请求失败，结果仅供参考` : "");
+  $("resDiff").textContent = [1, 2, 3]
+    .map((d) => {
+      const rs = results.filter((r) => r.d === d);
+      return rs.length ? `${DIFF_NAMES[d]} ${rs.filter((r) => r.ok).length}/${rs.length}` : null;
+    })
+    .filter(Boolean)
+    .join(" · ");
+
+  const cats = Object.keys(CAT_NAMES);
+  $("resCats").innerHTML = cats
+    .map((c) => {
+      const rs = results.filter((r) => r.cat === c);
+      if (!rs.length) return "";
+      const w = (rs.filter((r) => r.ok).length / rs.length) * 100;
+      const okCount = rs.filter((r) => r.ok).length;
+      return `<div class="cat-row"><span class="name">${CAT_NAMES[c]}</span><span class="track"><span class="fill" style="width:${w}%"></span></span><span class="val">${okCount}/${rs.length}</span></div>`;
+    })
+    .join("");
+
+  STATE.lastResult = { iq, correct: correctCount, total: results.length, pct, model: cfg.model, secs, date: new Date().toLocaleString(), week: `${year}-W${week}` };
+  if (!hasErr) saveBoard(STATE.lastResult);
+  $("resultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetTest() {
+  $("resultCard").style.display = "none";
+  $("progressCard").style.display = "none";
+  $("configCard").style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function copyResult() {
+  const r = STATE.lastResult;
+  if (!r) return;
+  const text = `🧠 模型智商检测（${r.week} 期题库）\n模型：${r.model}\n参考智商：${r.iq}（答对 ${r.correct}/${r.total}）\n用时：${r.secs} 秒\n${r.date}`;
+  navigator.clipboard.writeText(text).then(
+    () => alert("已复制到剪贴板"),
+    () => alert("复制失败，请手动选择文本复制")
+  );
+}
+
+/* ================= 排行榜 ================= */
+function loadBoard() {
+  try {
+    const list = JSON.parse(localStorage.getItem("miq_board") || "[]");
+    if (!Array.isArray(list)) return [];
+    return list.filter((r) => r && typeof r.model === "string" && Number.isFinite(r.iq) && Number.isInteger(r.correct) && Number.isInteger(r.total));
+  } catch (e) { return []; }
+}
+function saveBoard(r) {
+  const list = loadBoard();
+  list.unshift(r);
+  try { localStorage.setItem("miq_board", JSON.stringify(list.slice(0, 30))); } catch (e) { /* ignore */ }
+  renderBoard();
+}
+function renderBoard() {
+  const list = loadBoard().sort((a, b) => b.iq - a.iq);
+  const body = $("boardBody");
+  if (!list.length) {
+    body.innerHTML = '<div class="empty">还没有测试记录，快去测第一个模型吧。</div>';
+    return;
+  }
+  body.innerHTML =
+    '<table><thead><tr><th>排名</th><th>模型</th><th>参考智商</th><th>得分</th><th>期</th><th>时间</th></tr></thead><tbody>' +
+    list
+      .slice(0, 10)
+      .map(
+        (r, i) =>
+          `<tr><td>${["🥇", "🥈", "🥉"][i] || i + 1}</td><td>${String(r.model).replace(/</g, "&lt;")}</td><td class="iq">${r.iq}</td><td>${r.correct}/${r.total}</td><td style="color:var(--muted);font-size:12px;">${r.week || "-"}</td><td style="color:var(--muted);font-size:12px;">${r.date}</td></tr>`
+      )
+      .join("") +
+    "</tbody></table>";
+}
+function clearBoard() {
+  if (confirm("确定清空本机全部测试记录吗？")) {
+    localStorage.removeItem("miq_board");
+    renderBoard();
+  }
+}
+</script>
+</body>
+</html>
